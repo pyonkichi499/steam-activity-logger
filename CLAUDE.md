@@ -8,7 +8,7 @@ Steam のプレイセッションを Google Apps Script + Google スプレッド
 - GAS の API を使う処理は `steam.js` / `store.js` / `main.js` に置く
 
 ## コマンド
-- `npm test`: 単体テスト（Node 18+ の標準テストランナー）
+- `npm test`: 単体テスト（Node 22+ の標準テストランナー）
 - `npm run push`: clasp で GAS に反映（手動デプロイ。main へのマージ後に行う）
 
 ## 規約

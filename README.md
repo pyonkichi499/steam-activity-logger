@@ -73,7 +73,7 @@ test/core.test.js     core.js の単体テスト
 ## 開発
 
 ```sh
-npm test   # Node 18+ の標準テストランナーで core.js をテスト
+npm test   # Node 22+ の標準テストランナーで core.js をテスト
 ```
 
 - PR と main への push では、GitHub Actions が `npm test` を実行します。
