@@ -1,0 +1,10 @@
+{
+  "name": "steam-activity-logger",
+  "private": true,
+  "description": "Log Steam play sessions to Google Sheets with Google Apps Script",
+  "scripts": {
+    "test": "node --test",
+    "push": "clasp push",
+    "open": "clasp open"
+  }
+}
