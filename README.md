@@ -75,3 +75,6 @@ test/core.test.js     core.js の単体テスト
 ```sh
 npm test   # Node 18+ の標準テストランナーで core.js をテスト
 ```
+
+- PR と main への push では、GitHub Actions が `npm test` を実行します。
+- GAS への反映は手動です。main にマージした後、手元で `npm run push`（clasp）を実行するか、エディタに貼り付けます。
