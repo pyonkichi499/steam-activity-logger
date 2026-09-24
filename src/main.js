@@ -48,24 +48,30 @@ function checkSetup() {
 
 function startLogging() {
   fetchPlayer_(); // fail fast on bad configuration
-  deleteTriggers_();
-  ScriptApp.newTrigger(TICK_HANDLER).timeBased().everyMinutes(1).create();
-  ScriptApp.newTrigger(SUMMARY_HANDLER).timeBased().everyDays(1).atHour(CONFIG.cutoffHour).nearMinute(15).create();
-  var state = loadState_();
-  if (!state.since) {
-    state.since = Date.now();
-    saveState_(state);
-  }
+  withLock_(function () {
+    deleteTriggers_();
+    ScriptApp.newTrigger(TICK_HANDLER).timeBased().everyMinutes(1).create();
+    ScriptApp.newTrigger(SUMMARY_HANDLER).timeBased().everyDays(1).atHour(CONFIG.cutoffHour).nearMinute(15).create();
+    var state = loadState_();
+    if (!state.since) {
+      state.since = Date.now();
+      saveState_(state);
+    }
+  });
   getSheet_(SHEETS.sessions);
   getSheet_(SHEETS.errors);
   SpreadsheetApp.getActive().toast('記録を開始しました。');
 }
 
 function stopLogging() {
-  deleteTriggers_();
-  var result = flush(loadState_(), CONFIG);
-  appendSessions_(result.closed);
-  saveState_(result.state);
+  // Wait for a tick that may already be running, so the session is not written twice.
+  // Triggers are removed inside the lock so that nothing changes if the lock cannot be taken.
+  withLock_(function () {
+    deleteTriggers_();
+    var result = flush(loadState_(), CONFIG);
+    appendSessions_(result.closed);
+    saveState_(result.state);
+  });
   SpreadsheetApp.getActive().toast('記録を停止しました。');
 }
 
@@ -81,6 +87,19 @@ function updateSummary() {
   var result = aggregate(sessions, failures, since, Date.now(), CONFIG);
   writeDaily_(result.daily);
   writeHeatmap_(result.heatmap);
+}
+
+/** Runs fn while holding the script lock that tick() also takes. */
+function withLock_(fn) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30 * 1000)) {
+    throw new Error('記録処理が実行中です。しばらくしてからもう一度お試しください。');
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deleteTriggers_() {

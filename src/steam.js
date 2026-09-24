@@ -14,7 +14,13 @@ function fetchPlayer_() {
     'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/' +
     '?key=' + encodeURIComponent(apiKey) +
     '&steamids=' + encodeURIComponent(steamId);
-  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  var res;
+  try {
+    res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  } catch (e) {
+    // Network errors quote the request URL, which contains the API key.
+    throw new Error(e.message.split(apiKey).join('***'));
+  }
   var code = res.getResponseCode();
   if (code !== 200) {
     throw new Error('Steam API error: HTTP ' + code);
