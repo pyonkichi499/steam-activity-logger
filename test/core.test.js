@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { step, flush, gameDay, splitByHour, aggregate, formatMinutes } = require('../src/core.js');
+const { step, flush, gameDay, splitByHour, aggregate, aggregateByGame, formatMinutes } = require('../src/core.js');
 
 const MIN = 60 * 1000;
 const OPTS = { gapMs: 3 * MIN, intervalMs: MIN };
@@ -95,4 +95,27 @@ test('formatMinutes', () => {
   assert.strictEqual(formatMinutes(0), '0:00');
   assert.strictEqual(formatMinutes(65), '1:05');
   assert.strictEqual(formatMinutes(600.4), '10:00');
+});
+
+test('aggregateByGame totals per game, longest first, with the latest name', () => {
+  const s = (startMin, minutes, appId, name) => ({
+    appId,
+    name,
+    start: T0 + startMin * MIN,
+    end: T0 + (startMin + minutes) * MIN,
+  });
+  const sessions = [
+    s(0, 30, '10', 'Old Name'),
+    s(24 * 60, 60, '20', 'B'),
+    s(2 * 24 * 60, 90, '10', 'New Name'),
+  ];
+  const games = aggregateByGame(sessions, CFG);
+  assert.deepStrictEqual(games, [
+    { appId: '10', name: 'New Name', minutes: 120, count: 2, firstDay: '2026-09-24', lastDay: '2026-09-26', avgMinutes: 60 },
+    { appId: '20', name: 'B', minutes: 60, count: 1, firstDay: '2026-09-25', lastDay: '2026-09-25', avgMinutes: 60 },
+  ]);
+});
+
+test('aggregateByGame returns an empty list without sessions', () => {
+  assert.deepStrictEqual(aggregateByGame([], CFG), []);
 });

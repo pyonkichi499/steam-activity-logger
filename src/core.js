@@ -156,6 +156,48 @@ function aggregate(sessions, failureTimes, since, now, cfg) {
   return { daily: daily, heatmap: heatmap };
 }
 
+/**
+ * Aggregates sessions per game, longest total first. The name is taken from
+ * the game's most recent session, since Steam may rename a game.
+ *
+ * @param {Array<{appId:string, name:string, start:number, end:number}>} sessions
+ * @param {{tzOffsetMin:number, cutoffHour:number}} cfg
+ * @return {Array<{appId:string, name:string, minutes:number, count:number,
+ *                 firstDay:string, lastDay:string, avgMinutes:number}>}
+ */
+function aggregateByGame(sessions, cfg) {
+  var byGame = {};
+  sessions.forEach(function (s) {
+    var g = byGame[s.appId];
+    if (!g) {
+      g = byGame[s.appId] = { appId: s.appId, name: s.name, minutes: 0, count: 0, firstStart: s.start, lastStart: s.start };
+    }
+    g.minutes += (s.end - s.start) / MINUTE_MS;
+    g.count++;
+    if (s.start < g.firstStart) g.firstStart = s.start;
+    if (s.start >= g.lastStart) {
+      g.lastStart = s.start;
+      g.name = s.name;
+    }
+  });
+  return Object.keys(byGame)
+    .map(function (appId) {
+      var g = byGame[appId];
+      return {
+        appId: g.appId,
+        name: g.name,
+        minutes: Math.round(g.minutes),
+        count: g.count,
+        firstDay: gameDay(g.firstStart, cfg),
+        lastDay: gameDay(g.lastStart, cfg),
+        avgMinutes: Math.round(g.minutes / g.count),
+      };
+    })
+    .sort(function (a, b) {
+      return b.minutes - a.minutes;
+    });
+}
+
 /** Formats minutes as "H:MM". */
 function formatMinutes(minutes) {
   var total = Math.round(minutes);
@@ -172,6 +214,7 @@ if (typeof module !== 'undefined') {
     splitByHour: splitByHour,
     dayRange: dayRange,
     aggregate: aggregate,
+    aggregateByGame: aggregateByGame,
     formatMinutes: formatMinutes,
     WEEKDAY_LABELS: WEEKDAY_LABELS,
   };

@@ -47,8 +47,8 @@ function appendSessions_(sessions) {
 }
 
 function readSessions_() {
-  return readBody_(getSheet_(SHEETS.sessions), 2).map(function (row) {
-    return { start: new Date(row[0]).getTime(), end: new Date(row[1]).getTime() };
+  return readBody_(getSheet_(SHEETS.sessions), 5).map(function (row) {
+    return { start: new Date(row[0]).getTime(), end: new Date(row[1]).getTime(), appId: String(row[3]), name: row[4] };
   });
 }
 
@@ -73,6 +73,20 @@ function writeDaily_(daily) {
     return [d.day, WEEKDAY_LABELS[d.weekday], d.minutes, formatMinutes(d.minutes), d.count, d.failures];
   });
   sheet.getRange(2, 1, rows.length, SHEETS.daily.header.length).setValues(rows);
+}
+
+function writeGames_(games) {
+  var sheet = getSheet_(SHEETS.games);
+  var cols = SHEETS.games.header.length;
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    sheet.getRange(2, 1, lastRow - 1, cols).clearContent();
+  }
+  if (games.length === 0) return;
+  var rows = games.map(function (g) {
+    return [g.name, g.appId, g.minutes, formatMinutes(g.minutes), g.count, g.firstDay, g.lastDay, g.avgMinutes];
+  });
+  sheet.getRange(2, 1, rows.length, cols).setValues(rows);
 }
 
 function writeHeatmap_(heatmap) {
