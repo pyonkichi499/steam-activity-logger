@@ -14,6 +14,10 @@ var CONFIG = {
 var SHEETS = {
   sessions: { name: 'Sessions', header: ['開始', '終了', 'ゲーム日', 'AppID', 'ゲーム名', '分'] },
   daily: { name: 'Daily', header: ['ゲーム日', '曜日', '合計(分)', '合計(h:mm)', '回数', '取得失敗'] },
+  games: {
+    name: 'Games',
+    header: ['ゲーム名', 'AppID', '合計(分)', '合計(h:mm)', '回数', '初回', '最終', '平均(分)'],
+  },
   heatmap: { name: 'Heatmap', header: null },
   errors: { name: 'Errors', header: ['日時', '内容'] },
 };
