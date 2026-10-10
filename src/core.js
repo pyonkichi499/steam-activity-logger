@@ -198,6 +198,77 @@ function aggregateByGame(sessions, cfg) {
     });
 }
 
+/**
+ * Returns the period a game day belongs to: "YYYY-MM" for unit "month", or
+ * the Monday that starts its week ("YYYY-MM-DD") for unit "week".
+ */
+function periodOf(day, unit) {
+  if (unit === 'month') return day.slice(0, 7);
+  var daysSinceMonday = (weekdayOf(day) + 6) % 7;
+  return new Date(Date.parse(day + 'T00:00:00Z') - daysSinceMonday * DAY_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * Aggregates minutes per game and period, as a games x periods matrix. Like
+ * the daily totals, play is split at hour boundaries so a session crossing
+ * the cutoff counts toward each game day it covers.
+ *
+ * @param {Array<{appId:string, name:string, start:number, end:number}>} sessions
+ * @param {number} since when logging started
+ * @param {number} now
+ * @param {string} unit "week" or "month"
+ * @param {{tzOffsetMin:number, cutoffHour:number}} cfg
+ * @return {{periods: Array<string>,
+ *           games: Array<{appId:string, name:string, total:number, minutes:Array<number>}>}}
+ *   periods are oldest first; games[i].minutes[j] is the play time in periods[j].
+ */
+function aggregateByGamePeriod(sessions, since, now, unit, cfg) {
+  var periods = [];
+  dayRange(gameDay(since, cfg), gameDay(now, cfg)).forEach(function (day) {
+    var p = periodOf(day, unit);
+    if (periods[periods.length - 1] !== p) periods.push(p);
+  });
+  var indexOf = {};
+  periods.forEach(function (p, i) {
+    indexOf[p] = i;
+  });
+
+  var byGame = {};
+  sessions.forEach(function (s) {
+    var g = byGame[s.appId];
+    if (!g) {
+      g = byGame[s.appId] = { appId: s.appId, name: s.name, lastStart: s.start, minutes: new Array(periods.length).fill(0) };
+    }
+    if (s.start >= g.lastStart) {
+      g.lastStart = s.start;
+      g.name = s.name;
+    }
+    splitByHour(s.start, s.end, cfg).forEach(function (piece) {
+      var i = indexOf[periodOf(gameDay(piece.start, cfg), unit)];
+      if (i !== undefined) g.minutes[i] += piece.minutes;
+    });
+  });
+
+  return {
+    periods: periods,
+    games: Object.keys(byGame)
+      .map(function (appId) {
+        var g = byGame[appId];
+        var minutes = g.minutes.map(Math.round);
+        var total = minutes.reduce(function (sum, m) {
+          return sum + m;
+        }, 0);
+        return { appId: g.appId, name: g.name, total: total, minutes: minutes };
+      })
+      .filter(function (g) {
+        return g.total > 0;
+      })
+      .sort(function (a, b) {
+        return b.total - a.total;
+      }),
+  };
+}
+
 /** Formats minutes as "H:MM". */
 function formatMinutes(minutes) {
   var total = Math.round(minutes);
@@ -215,6 +286,8 @@ if (typeof module !== 'undefined') {
     dayRange: dayRange,
     aggregate: aggregate,
     aggregateByGame: aggregateByGame,
+    periodOf: periodOf,
+    aggregateByGamePeriod: aggregateByGamePeriod,
     formatMinutes: formatMinutes,
     WEEKDAY_LABELS: WEEKDAY_LABELS,
   };

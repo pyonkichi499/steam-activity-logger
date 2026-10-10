@@ -90,6 +90,25 @@ function writeGames_(games) {
   sheet.getRange(2, 1, rows.length, cols).setValues(rows);
 }
 
+/** Writes a games x periods matrix of minutes, rebuilding the sheet since its columns change over time. */
+function writeGamePeriods_(def, result) {
+  var sheet = getSheet_(def);
+  sheet.clear();
+  var header = ['ゲーム名', '合計(分)'].concat(result.periods);
+  // Weekly periods outgrow the default 26 columns within half a year.
+  var missing = header.length - sheet.getMaxColumns();
+  if (missing > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), missing);
+  // Plain text, so that period labels like "2026-09" are not parsed as dates.
+  sheet.getRange(1, 1, 1, header.length).setNumberFormat('@').setValues([header]).setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(2);
+  if (result.games.length === 0) return;
+  var rows = result.games.map(function (g) {
+    return [g.name, g.total].concat(g.minutes);
+  });
+  sheet.getRange(2, 1, rows.length, header.length).setValues(rows);
+}
+
 function writeHeatmap_(heatmap) {
   var sheet = getSheet_(SHEETS.heatmap);
   sheet.clear();

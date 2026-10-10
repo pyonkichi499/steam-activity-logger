@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { step, flush, gameDay, splitByHour, aggregate, aggregateByGame, formatMinutes } = require('../src/core.js');
+const { step, flush, gameDay, splitByHour, aggregate, aggregateByGame, periodOf, aggregateByGamePeriod, formatMinutes } = require('../src/core.js');
 
 const MIN = 60 * 1000;
 const OPTS = { gapMs: 3 * MIN, intervalMs: MIN };
@@ -118,4 +118,56 @@ test('aggregateByGame totals per game, longest first, with the latest name', () 
 
 test('aggregateByGame returns an empty list without sessions', () => {
   assert.deepStrictEqual(aggregateByGame([], CFG), []);
+});
+
+test('periodOf maps a game day to its month or the Monday of its week', () => {
+  assert.strictEqual(periodOf('2026-09-24', 'month'), '2026-09');
+  assert.strictEqual(periodOf('2026-09-24', 'week'), '2026-09-21'); // Thursday
+  assert.strictEqual(periodOf('2026-09-21', 'week'), '2026-09-21'); // Monday
+  assert.strictEqual(periodOf('2026-10-04', 'week'), '2026-09-28'); // Sunday
+});
+
+test('aggregateByGamePeriod builds a games x periods matrix, longest total first', () => {
+  const DAY = 24 * 60;
+  const s = (startMin, minutes, appId, name) => ({
+    appId,
+    name,
+    start: T0 + startMin * MIN,
+    end: T0 + (startMin + minutes) * MIN,
+  });
+  const sessions = [
+    s(0, 30, '10', 'Old Name'), // Thu 2026-09-24
+    s(4 * DAY, 60, '20', 'B'), // Mon 2026-09-28
+    s(8 * DAY, 90, '10', 'New Name'), // Fri 2026-10-02
+  ];
+  const now = T0 + 10 * DAY * MIN;
+
+  assert.deepStrictEqual(aggregateByGamePeriod(sessions, T0, now, 'week', CFG), {
+    periods: ['2026-09-21', '2026-09-28'],
+    games: [
+      { appId: '10', name: 'New Name', total: 120, minutes: [30, 90] },
+      { appId: '20', name: 'B', total: 60, minutes: [0, 60] },
+    ],
+  });
+  assert.deepStrictEqual(aggregateByGamePeriod(sessions, T0, now, 'month', CFG), {
+    periods: ['2026-09', '2026-10'],
+    games: [
+      { appId: '10', name: 'New Name', total: 120, minutes: [30, 90] },
+      { appId: '20', name: 'B', total: 60, minutes: [60, 0] },
+    ],
+  });
+});
+
+test('aggregateByGamePeriod splits a session crossing the cutoff into both game days', () => {
+  // 2026-10-01 03:30-04:30 JST: the first half belongs to game day 2026-09-30.
+  const start = Date.parse('2026-10-01T03:30:00+09:00');
+  const sessions = [{ appId: '10', name: 'A', start, end: start + 60 * MIN }];
+  const result = aggregateByGamePeriod(sessions, T0, start + 60 * MIN, 'month', CFG);
+  assert.deepStrictEqual(result.periods, ['2026-09', '2026-10']);
+  assert.deepStrictEqual(result.games[0].minutes, [30, 30]);
+});
+
+test('aggregateByGamePeriod drops games played only before logging started', () => {
+  const sessions = [{ appId: '10', name: 'A', start: T0 - 8 * 24 * 60 * MIN, end: T0 - 8 * 24 * 60 * MIN + 30 * MIN }];
+  assert.deepStrictEqual(aggregateByGamePeriod(sessions, T0, T0, 'week', CFG), { periods: ['2026-09-21'], games: [] });
 });

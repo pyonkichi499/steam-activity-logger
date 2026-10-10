@@ -75,7 +75,7 @@ function stopLogging() {
   SpreadsheetApp.getActive().toast('記録を停止しました。');
 }
 
-/** Rebuilds the Daily, Games and Heatmap sheets from Sessions and Errors. Runs daily after the cutoff. */
+/** Rebuilds the Daily, Games, GamesWeekly, GamesMonthly and Heatmap sheets from Sessions and Errors. Runs daily after the cutoff. */
 function updateSummary() {
   var sessions = readSessions_();
   var failures = readErrorTimes_();
@@ -84,9 +84,12 @@ function updateSummary() {
   // Count the session still in progress up to its last observation, so a game
   // running across the scheduled rebuild is not missing from the summary.
   sessions = sessions.concat(flush(state, CONFIG).closed);
-  var result = aggregate(sessions, failures, since, Date.now(), CONFIG);
+  var now = Date.now();
+  var result = aggregate(sessions, failures, since, now, CONFIG);
   writeDaily_(result.daily);
   writeGames_(aggregateByGame(sessions, CONFIG));
+  writeGamePeriods_(SHEETS.gamesWeekly, aggregateByGamePeriod(sessions, since, now, 'week', CONFIG));
+  writeGamePeriods_(SHEETS.gamesMonthly, aggregateByGamePeriod(sessions, since, now, 'month', CONFIG));
   writeHeatmap_(result.heatmap);
 }
 

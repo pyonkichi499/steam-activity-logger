@@ -18,6 +18,8 @@ var SHEETS = {
     name: 'Games',
     header: ['ゲーム名', 'AppID', '合計(分)', '合計(h:mm)', '回数', '初回', '最終', '平均(分)'],
   },
+  gamesWeekly: { name: 'GamesWeekly', header: null },
+  gamesMonthly: { name: 'GamesMonthly', header: null },
   heatmap: { name: 'Heatmap', header: null },
   errors: { name: 'Errors', header: ['日時', '内容'] },
 };
