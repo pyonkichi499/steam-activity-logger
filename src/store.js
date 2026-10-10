@@ -33,22 +33,23 @@ function appendSessions_(sessions) {
   var sheet = getSheet_(SHEETS.sessions);
   var rows = sessions.map(function (s) {
     return [
+      gameDay(s.start, CONFIG),
+      s.name,
       new Date(s.start),
       new Date(s.end),
-      gameDay(s.start, CONFIG),
-      s.appId,
-      s.name,
       Math.round((s.end - s.start) / 60000),
+      s.appId,
     ];
   });
   var range = sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length);
   range.setValues(rows);
-  range.offset(0, 0, rows.length, 2).setNumberFormat('yyyy/MM/dd HH:mm');
+  // The date is in the game day column, so only the clock time is shown.
+  range.offset(0, 2, rows.length, 2).setNumberFormat('HH:mm');
 }
 
 function readSessions_() {
-  return readBody_(getSheet_(SHEETS.sessions), 5).map(function (row) {
-    return { start: new Date(row[0]).getTime(), end: new Date(row[1]).getTime(), appId: String(row[3]), name: row[4] };
+  return readBody_(getSheet_(SHEETS.sessions), SHEETS.sessions.header.length).map(function (row) {
+    return { start: new Date(row[2]).getTime(), end: new Date(row[3]).getTime(), appId: String(row[5]), name: row[1] };
   });
 }
 

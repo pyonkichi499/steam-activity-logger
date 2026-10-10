@@ -12,7 +12,7 @@ var CONFIG = {
 };
 
 var SHEETS = {
-  sessions: { name: 'Sessions', header: ['開始', '終了', 'ゲーム日', 'AppID', 'ゲーム名', '分'] },
+  sessions: { name: 'Sessions', header: ['ゲーム日', 'ゲーム名', '開始', '終了', '分', 'AppID'] },
   daily: { name: 'Daily', header: ['ゲーム日', '曜日', '合計(分)', '合計(h:mm)', '回数', '取得失敗'] },
   games: {
     name: 'Games',
